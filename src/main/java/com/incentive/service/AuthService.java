@@ -119,8 +119,9 @@ public class AuthService {
     }
 
     private List<UserProjectDTO> getUserProjects(Long userId) {
+        UserProjectDTO dtoInstance = new UserProjectDTO();
         return UserProject.findByUserId(userId).stream()
-                .map(UserProjectDTO::from)
+                .map(dtoInstance::from)
                 .collect(Collectors.toList());
     }
 }

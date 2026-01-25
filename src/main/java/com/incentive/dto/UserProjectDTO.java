@@ -2,10 +2,18 @@ package com.incentive.dto;
 
 import com.incentive.entity.Role;
 import com.incentive.entity.UserProject;
+import com.incentive.service.ProjectHashService;
+import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 
+@ApplicationScoped
 public class UserProjectDTO {
 
+    @Inject
+    ProjectHashService projectHashService;
+
     public Long projectId;
+    public String projectHash;
     public String projectName;
     public String projectDescription;
     public Role role;
@@ -14,17 +22,19 @@ public class UserProjectDTO {
     public UserProjectDTO() {
     }
 
-    public UserProjectDTO(Long projectId, String projectName, String projectDescription, Role role, boolean projectActive) {
+    public UserProjectDTO(Long projectId, String projectHash, String projectName, String projectDescription, Role role, boolean projectActive) {
         this.projectId = projectId;
+        this.projectHash = projectHash;
         this.projectName = projectName;
         this.projectDescription = projectDescription;
         this.role = role;
         this.projectActive = projectActive;
     }
 
-    public static UserProjectDTO from(UserProject userProject) {
+    public UserProjectDTO from(UserProject userProject) {
         return new UserProjectDTO(
             userProject.project.id,
+            projectHashService.encryptProjectId(userProject.project.id),
             userProject.project.name,
             userProject.project.description,
             userProject.role,

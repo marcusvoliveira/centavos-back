@@ -5,6 +5,8 @@ import com.incentive.entity.Project;
 import com.incentive.entity.Role;
 import com.incentive.entity.User;
 import com.incentive.entity.UserProject;
+import com.incentive.service.ProjectHashService;
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
@@ -24,6 +26,9 @@ public class ProjectResource {
     @Inject
     JsonWebToken jwt;
 
+    @Inject
+    ProjectHashService projectHashService;
+
     @GET
     @RolesAllowed({"USER", "MODERATOR", "AGENT", "ADMIN"})
     public List<ProjectDTO> listProjects() {
@@ -33,13 +38,13 @@ public class ProjectResource {
         // ADMIN vê todos os projetos
         if ("ADMIN".equals(userRole)) {
             return Project.<Project>listAll().stream()
-                    .map(ProjectDTO::from)
+                    .map(project -> new ProjectDTO().from(project))
                     .collect(Collectors.toList());
         }
 
         // Outros usuários veem apenas seus projetos
         return UserProject.findByUserId(userId).stream()
-                .map(up -> ProjectDTO.from(up.project))
+                .map(up -> new ProjectDTO().from(up.project))
                 .collect(Collectors.toList());
     }
 
@@ -63,7 +68,7 @@ public class ProjectResource {
             }
         }
 
-        return Response.ok(ProjectDTO.from(project)).build();
+        return Response.ok(new ProjectDTO().from(project)).build();
     }
 
     @POST
@@ -86,8 +91,9 @@ public class ProjectResource {
         userProject.role = "ADMIN".equals(userRole) ? Role.ADMIN : Role.MODERATOR;
         userProject.persist();
 
+        ProjectDTO dto = new ProjectDTO();
         return Response.status(Response.Status.CREATED)
-                .entity(ProjectDTO.from(project))
+                .entity(dto.from(project))
                 .build();
     }
 
@@ -123,7 +129,7 @@ public class ProjectResource {
 
         project.persist();
 
-        return Response.ok(ProjectDTO.from(project)).build();
+        return Response.ok(new ProjectDTO().from(project)).build();
     }
 
     @DELETE
@@ -168,14 +174,9 @@ public class ProjectResource {
             return Response.status(Response.Status.FORBIDDEN).build();
         }
 
+        UserProjectDTO dtoInstance = new UserProjectDTO();
         List<UserProjectDTO> users = UserProject.findByProjectId(projectId).stream()
-                .map(up -> new UserProjectDTO(
-                        up.project.id,
-                        up.project.name,
-                        up.project.description,
-                        up.role,
-                        up.project.active
-                ))
+                .map(dtoInstance::from)
                 .collect(Collectors.toList());
 
         return Response.ok(users).build();
@@ -257,21 +258,62 @@ public class ProjectResource {
         return Response.noContent().build();
     }
 
+    @GET
+    @Path("/by-hash/{hash}")
+    @PermitAll
+    public Response getProjectByHash(@PathParam("hash") String hash) {
+        try {
+            Long projectId = projectHashService.decryptProjectHash(hash);
+            Project project = Project.findById(projectId);
+
+            if (project == null) {
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity("{\"error\": \"Projeto não encontrado\"}")
+                        .build();
+            }
+
+            if (!project.active) {
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity("{\"error\": \"Projeto inativo\"}")
+                        .build();
+            }
+
+            PublicProjectDTO dto = new PublicProjectDTO();
+            dto.hash = hash;
+            dto.name = project.name;
+            dto.description = project.description;
+
+            return Response.ok(dto).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"Hash inválido\"}")
+                    .build();
+        }
+    }
+
     // DTOs
-    public static class ProjectDTO {
+    public class ProjectDTO {
         public Long id;
         public String name;
         public String description;
         public boolean active;
+        public String hash;
 
-        public static ProjectDTO from(Project project) {
+        public ProjectDTO from(Project project) {
             ProjectDTO dto = new ProjectDTO();
             dto.id = project.id;
             dto.name = project.name;
             dto.description = project.description;
             dto.active = project.active;
+            dto.hash = projectHashService.encryptProjectId(project.id);
             return dto;
         }
+    }
+
+    public static class PublicProjectDTO {
+        public String hash;
+        public String name;
+        public String description;
     }
 
     public static class CreateProjectRequest {
