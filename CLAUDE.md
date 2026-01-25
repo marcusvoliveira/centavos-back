@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**Incentive** is a backend REST API built with Quarkus that manages donation calculations based on bank statement transactions. The system automatically calculates 1% of user expenses as monthly donations and provides scheduled email reports.
+**Incentive** is a multi-project backend REST API built with Quarkus that manages donation calculations based on bank statement transactions. The system supports multiple projects with role-based access control, automatically calculates 1% of user expenses as monthly donations, and provides scheduled email reports.
+
+**Key Features:**
+- **Multi-Project Architecture**: Users can belong to multiple projects with different roles
+- **Role-Based Access Control**: USER, MODERATOR, AGENT, and ADMIN roles
+- **Project Isolation**: Each project has its own users, bank statements, and donations
+- **Flexible Permissions**: Moderators manage their projects, Agents have read-only access
 
 **Technology Stack:**
 - Java 21
@@ -99,6 +105,32 @@ com.incentive/
 - DonationStatus: PENDING, PROCESSED, CANCELLED
 - Custom finders: `findByUserId()`, `findByUserIdAndStatus()`, `calculateTotalByUserId()`
 
+**Project** (`entity/Project.java`)
+- Represents a project in the system
+- Fields: name, description, active
+- Custom finders: `findActiveProjects()`, `findByName()`
+- Each project can have multiple users with different roles
+
+**UserProject** (`entity/UserProject.java`)
+- Many-to-many relationship between User and Project
+- Stores the user's role within a specific project
+- Unique constraint: one user can have only one role per project
+- Custom finders: `findByUserId()`, `findByProjectId()`, `findByUserAndProject()`, `userHasAccessToProject()`, `userIsModeratorOfProject()`
+
+### Multi-Project Architecture
+
+The system supports multiple independent projects, each with its own set of users and permissions:
+
+1. **User-Project Association**: Users are associated with projects through the `UserProject` entity
+2. **Project-Scoped Roles**: Each user can have different roles in different projects
+3. **Access Control**:
+   - **ADMIN**: Global access to all projects and full system administration
+   - **MODERATOR**: Can manage their assigned projects (create, update, delete, manage users)
+   - **AGENT**: Read-only access to assigned projects (can view but not modify)
+   - **USER**: Basic access to assigned projects with standard user permissions
+
+4. **Default Project**: Existing users are automatically assigned to a "Default Project" during migration
+
 ### Authentication & Security
 
 **JWT Token Flow:**
@@ -108,7 +140,11 @@ com.incentive/
 4. User logs in via `/api/auth/login` - receives JWT token
 5. Token must be included in `Authorization: Bearer <token>` header for protected endpoints
 
-**Roles:** USER, ADMIN, MODERATOR (defined in `entity/Role.java`)
+**Roles:** USER, ADMIN, MODERATOR, AGENT (defined in `entity/Role.java`)
+- **USER**: Standard user with basic project access
+- **MODERATOR**: Project owner/manager with full project permissions
+- **AGENT**: Read-only project access (like MODERATOR but without configuration permissions)
+- **ADMIN**: System-wide administrator with access to all projects
 
 **TokenService** (`security/TokenService.java`) handles JWT generation with:
 - RSA key pair signing
@@ -174,7 +210,7 @@ Add production frontend URLs when deploying.
 
 ### Authentication (Public)
 - `POST /api/auth/register` - Create new user account
-- `POST /api/auth/login` - Authenticate and receive JWT token
+- `POST /api/auth/login` - Authenticate and receive JWT token (returns user data + list of projects)
 - `POST /api/auth/verify-email` - Verify email with 6-digit code
 - `POST /api/auth/resend-verification` - Request new verification code
 
@@ -182,6 +218,16 @@ Add production frontend URLs when deploying.
 - `GET /api/users/me` - Get current user profile
 - `PUT /api/users/me` - Update current user
 - `GET /api/users` - List all users (ADMIN only)
+
+### Projects (Authenticated)
+- `GET /api/projects` - List user's projects (ADMIN sees all, others see only assigned projects)
+- `GET /api/projects/{id}` - Get specific project details
+- `POST /api/projects` - Create new project (ADMIN, MODERATOR)
+- `PUT /api/projects/{id}` - Update project (ADMIN or project MODERATOR)
+- `DELETE /api/projects/{id}` - Delete project (ADMIN or project MODERATOR)
+- `GET /api/projects/{id}/users` - List users in project
+- `POST /api/projects/{id}/users` - Add user to project (ADMIN or project MODERATOR)
+- `DELETE /api/projects/{projectId}/users/{userId}` - Remove user from project (ADMIN or project MODERATOR)
 
 ### Bank Statements (Authenticated)
 - `GET /api/bank-statements` - List user's statements
@@ -204,6 +250,10 @@ Add production frontend URLs when deploying.
 Flyway migrations are in `src/main/resources/db/migration/`:
 - `V1.0.0__initial_schema.sql` - Creates tables: users, bank_statements, donations, addresses
 - `V1.0.1__seed_data.sql` - Creates admin user (admin@incentive.com / admin123)
+- `V1.0.2__add_projects_and_user_projects.sql` - Adds multi-project support:
+  - Creates `projects` table
+  - Creates `user_projects` table (many-to-many with roles)
+  - Creates "Default Project" and associates all existing users to it
 
 Migrations run automatically on startup (`quarkus.flyway.migrate-at-start=true`).
 
@@ -259,13 +309,32 @@ Default admin credentials for testing:
 ## Frontend Integration
 
 Backend is CORS-enabled for React/Vue/Angular frontends. Include JWT token in Authorization header:
+
 ```javascript
+// Login returns user data + projects
+const loginResponse = await fetch('http://localhost:8080/api/auth/login', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ email, password })
+});
+
+const { token, user, projects } = await loginResponse.json();
+// projects: [{ projectId, projectName, role, ... }]
+
+// Use token in subsequent requests
 fetch('http://localhost:8080/api/users/me', {
   headers: {
     'Authorization': `Bearer ${token}`
   }
 })
 ```
+
+**Multi-Project Frontend Considerations:**
+- Display project selector in UI based on `projects` array from login
+- Store current selected project in frontend state
+- Filter data based on current project
+- Show/hide UI elements based on user's role in current project
+- MODERATOR and AGENT roles have project-specific permissions
 
 ## Deployment Considerations
 

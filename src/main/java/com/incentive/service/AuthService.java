@@ -9,11 +9,14 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.NotAuthorizedException;
 import com.incentive.entity.Role;
 import com.incentive.entity.User;
+import com.incentive.entity.UserProject;
 import com.incentive.security.TokenService;
 import com.incentive.util.PasswordUtil;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @ApplicationScoped
 public class AuthService {
@@ -53,7 +56,10 @@ public class AuthService {
         // Gerar token
         String token = tokenService.generateToken(user);
 
-        return new AuthResponse(token, UserDTO.from(user));
+        // Buscar projetos do usuário
+        List<UserProjectDTO> projects = getUserProjects(user.id);
+
+        return new AuthResponse(token, UserDTO.from(user), projects);
     }
 
     @Transactional
@@ -67,7 +73,10 @@ public class AuthService {
 
         String token = tokenService.generateToken(user);
 
-        return new AuthResponse(token, UserDTO.from(user));
+        // Buscar projetos do usuário
+        List<UserProjectDTO> projects = getUserProjects(user.id);
+
+        return new AuthResponse(token, UserDTO.from(user), projects);
     }
 
     @Transactional
@@ -107,5 +116,11 @@ public class AuthService {
     private String generateVerificationCode() {
         Random random = new Random();
         return String.format("%06d", random.nextInt(999999));
+    }
+
+    private List<UserProjectDTO> getUserProjects(Long userId) {
+        return UserProject.findByUserId(userId).stream()
+                .map(UserProjectDTO::from)
+                .collect(Collectors.toList());
     }
 }
