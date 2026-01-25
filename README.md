@@ -6,8 +6,8 @@ API REST desenvolvida com Quarkus para gerenciar doações baseadas em extratos 
 
 ## Tecnologias
 
-- **Java 21**
-- **Quarkus 3.17.5**
+- **Java 21** (LTS)
+- **Quarkus 3.30.6**
 - **PostgreSQL**
 - **Panache** (Hibernate ORM)
 - **SmallRye JWT** (Autenticação)

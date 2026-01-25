@@ -13,8 +13,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Flexible Permissions**: Moderators manage their projects, Agents have read-only access
 
 **Technology Stack:**
-- Java 21
-- Quarkus 3.27.1
+- Java 21 (LTS)
+- Quarkus 3.30.6
 - PostgreSQL with Panache (Hibernate ORM)
 - SmallRye JWT for authentication
 - Flyway for database migrations
