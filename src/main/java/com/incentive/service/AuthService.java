@@ -11,6 +11,7 @@ import com.incentive.entity.Role;
 import com.incentive.entity.User;
 import com.incentive.entity.UserProject;
 import com.incentive.security.TokenService;
+import com.incentive.util.EmailVerificationCache;
 import com.incentive.util.PasswordUtil;
 
 import java.time.LocalDateTime;
@@ -26,6 +27,12 @@ public class AuthService {
 
     @Inject
     EmailService emailService;
+
+    @Inject
+    ProjectHashService projectHashService;
+
+    @Inject
+    EmailVerificationCache emailVerificationCache;
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
@@ -113,15 +120,24 @@ public class AuthService {
         emailService.sendVerificationEmail(user.email, user.name, verificationCode);
     }
 
+    public void sendAdminEmailCode(String email, String name) {
+        String code = generateVerificationCode();
+        emailVerificationCache.store(email, code);
+        emailService.sendVerificationEmail(email, name, code);
+    }
+
+    public boolean verifyAdminEmailCode(String email, String code) {
+        return emailVerificationCache.verify(email, code);
+    }
+
     private String generateVerificationCode() {
         Random random = new Random();
         return String.format("%06d", random.nextInt(999999));
     }
 
     private List<UserProjectDTO> getUserProjects(Long userId) {
-        UserProjectDTO dtoInstance = new UserProjectDTO();
         return UserProject.findByUserId(userId).stream()
-                .map(dtoInstance::from)
+                .map(up -> UserProjectDTO.from(up, projectHashService))
                 .collect(Collectors.toList());
     }
 }

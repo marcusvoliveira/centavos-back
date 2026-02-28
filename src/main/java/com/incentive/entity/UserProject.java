@@ -3,6 +3,7 @@ package com.incentive.entity;
 import io.quarkus.hibernate.orm.panache.PanacheEntity;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +25,9 @@ public class UserProject extends PanacheEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     public Role role;
+
+    @Column(precision = 5, scale = 2)
+    public BigDecimal participation;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     public LocalDateTime createdAt;

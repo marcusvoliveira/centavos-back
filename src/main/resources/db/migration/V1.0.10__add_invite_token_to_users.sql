@@ -1,0 +1,2 @@
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token VARCHAR(255);
+ALTER TABLE users ADD COLUMN IF NOT EXISTS invite_token_expires_at TIMESTAMP;

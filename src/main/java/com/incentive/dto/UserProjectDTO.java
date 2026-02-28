@@ -3,14 +3,8 @@ package com.incentive.dto;
 import com.incentive.entity.Role;
 import com.incentive.entity.UserProject;
 import com.incentive.service.ProjectHashService;
-import jakarta.enterprise.context.ApplicationScoped;
-import jakarta.inject.Inject;
 
-@ApplicationScoped
 public class UserProjectDTO {
-
-    @Inject
-    ProjectHashService projectHashService;
 
     public Long projectId;
     public String projectHash;
@@ -31,7 +25,7 @@ public class UserProjectDTO {
         this.projectActive = projectActive;
     }
 
-    public UserProjectDTO from(UserProject userProject) {
+    public static UserProjectDTO from(UserProject userProject, ProjectHashService projectHashService) {
         return new UserProjectDTO(
             userProject.project.id,
             projectHashService.encryptProjectId(userProject.project.id),

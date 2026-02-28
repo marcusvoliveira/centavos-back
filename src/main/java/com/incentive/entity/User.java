@@ -23,18 +23,19 @@ public class User extends PanacheEntity {
     @Column(nullable = false, unique = true, length = 150)
     public String email;
 
-    @NotBlank(message = "CPF é obrigatório")
-    @Column(nullable = false, unique = true, length = 150)
+    @Column(nullable = true, unique = true, length = 150)
     public String cpf;
 
-    @NotBlank(message = "Senha é obrigatória")
-    @Size(min = 8, message = "Senha deve ter no mínimo 8 caracteres")
-    @Column(nullable = false)
+    // Validation enforced at DTO level (RegisterRequest) — agents don't have passwords
+    @Column(nullable = true)
     public String password;
 
     @Size(max = 20)
     @Column(length = 20)
     public String phone;
+
+    @Column(name = "pix_key", length = 100)
+    public String pixKey;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -48,6 +49,12 @@ public class User extends PanacheEntity {
 
     @Column(name = "verification_code_expires_at")
     public LocalDateTime verificationCodeExpiresAt;
+
+    @Column(name = "invite_token", length = 255)
+    public String inviteToken;
+
+    @Column(name = "invite_token_expires_at")
+    public LocalDateTime inviteTokenExpiresAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     public LocalDateTime createdAt;
@@ -77,5 +84,9 @@ public class User extends PanacheEntity {
 
     public static boolean existsByEmail(String email) {
         return count("email", email) > 0;
+    }
+
+    public static Optional<User> findByInviteToken(String token) {
+        return find("inviteToken", token).firstResultOptional();
     }
 }
