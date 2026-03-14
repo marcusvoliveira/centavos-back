@@ -20,4 +20,6 @@ public class RegisterRequest {
 
     @Size(max = 20)
     public String phone;
+
+    public String projectHash;
 }

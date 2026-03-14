@@ -3,13 +3,16 @@ package com.incentive.resource;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
+import jakarta.validation.Valid;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import org.eclipse.microprofile.jwt.JsonWebToken;
+import com.incentive.dto.InviteUserRequest;
 import com.incentive.dto.UserDTO;
 import com.incentive.entity.Role;
 import com.incentive.entity.User;
+import com.incentive.service.InviteService;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,6 +25,9 @@ public class UserResource {
 
     @Inject
     JsonWebToken jwt;
+
+    @Inject
+    InviteService inviteService;
 
     @GET
     @Path("/me")
@@ -110,6 +116,14 @@ public class UserResource {
         dto.pixKey = user.pixKey;
 
         return Response.ok(dto).build();
+    }
+
+    @POST
+    @RolesAllowed({"ADMIN", "MODERATOR"})
+    public Response inviteUser(@Valid InviteUserRequest request) {
+        Long inviterId = jwt.getClaim("userId");
+        inviteService.inviteUser(request, inviterId);
+        return Response.status(Response.Status.CREATED).build();
     }
 
     public static class AgentDTO {

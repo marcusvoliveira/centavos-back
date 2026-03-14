@@ -101,8 +101,15 @@ public class ProjectResource {
         if (request.backgroundColor != null) project.backgroundColor = request.backgroundColor;
         if (request.logoUrl != null) project.logoUrl = request.logoUrl;
         if (request.heroImageUrl != null) project.heroImageUrl = request.heroImageUrl;
+        if (request.logoDarkUrl != null) project.logoDarkUrl = request.logoDarkUrl;
         if (request.heroTitle != null) project.heroTitle = request.heroTitle;
         if (request.heroSubtitle != null) project.heroSubtitle = request.heroSubtitle;
+        project.navLink1Label = request.navLink1Label;
+        project.navLink1Url = request.navLink1Url;
+        project.navLink2Label = request.navLink2Label;
+        project.navLink2Url = request.navLink2Url;
+        project.navLink3Label = request.navLink3Label;
+        project.navLink3Url = request.navLink3Url;
 
         // Emails
         project.emailBoasVindas = request.emailBoasVindas;
@@ -126,19 +133,21 @@ public class ProjectResource {
         // Plan
         project.planType = request.planType;
 
-        // Forma de pagamento da plataforma
-        project.formaPagamento = request.formaPagamento;
-        if ("PIX".equals(request.formaPagamento)) {
-            project.formaPagamentoPixKey = request.formaPagamentoPixKey;
-        } else if ("CREDIT_CARD".equals(request.formaPagamento)
-                && request.cardNumberEncrypted != null && !request.cardNumberEncrypted.isBlank()) {
-            // Descriptografar para uso em outro processo (ex: gateway de pagamento)
-            // Dados do cartão NÃO são persistidos no BD
-            String cardNumber = cardEncryptionService.decrypt(request.cardNumberEncrypted);
-            String cvv = (request.cardCvvEncrypted != null && !request.cardCvvEncrypted.isBlank())
-                    ? cardEncryptionService.decrypt(request.cardCvvEncrypted) : null;
-            // TODO: encaminhar cardNumber, cvv, request.cardHolder, request.cardExpiry ao gateway
-            // Por ora: dados descriptografados disponíveis mas NÃO persistidos
+        // Forma de pagamento da plataforma (opcional)
+        if (request.formaPagamento != null) {
+            project.formaPagamento = request.formaPagamento;
+            if ("PIX".equals(request.formaPagamento)) {
+                project.formaPagamentoPixKey = request.formaPagamentoPixKey;
+            } else if ("CREDIT_CARD".equals(request.formaPagamento)
+                    && request.cardNumberEncrypted != null && !request.cardNumberEncrypted.isBlank()) {
+                // Descriptografar para uso em outro processo (ex: gateway de pagamento)
+                // Dados do cartão NÃO são persistidos no BD
+                String cardNumber = cardEncryptionService.decrypt(request.cardNumberEncrypted);
+                String cvv = (request.cardCvvEncrypted != null && !request.cardCvvEncrypted.isBlank())
+                        ? cardEncryptionService.decrypt(request.cardCvvEncrypted) : null;
+                // TODO: encaminhar cardNumber, cvv, request.cardHolder, request.cardExpiry ao gateway
+                // Por ora: dados descriptografados disponíveis mas NÃO persistidos
+            }
         }
 
         project.persist();
@@ -426,8 +435,15 @@ public class ProjectResource {
             dto.backgroundColor = project.backgroundColor;
             dto.logoUrl = project.logoUrl;
             dto.heroImageUrl = project.heroImageUrl;
+            dto.logoDarkUrl = project.logoDarkUrl;
             dto.heroTitle = project.heroTitle;
             dto.heroSubtitle = project.heroSubtitle;
+            dto.navLink1Label = project.navLink1Label;
+            dto.navLink1Url = project.navLink1Url;
+            dto.navLink2Label = project.navLink2Label;
+            dto.navLink2Url = project.navLink2Url;
+            dto.navLink3Label = project.navLink3Label;
+            dto.navLink3Url = project.navLink3Url;
 
             return Response.ok(dto).build();
         } catch (Exception e) {
@@ -472,8 +488,15 @@ public class ProjectResource {
         public String backgroundColor;
         public String logoUrl;
         public String heroImageUrl;
+        public String logoDarkUrl;
         public String heroTitle;
         public String heroSubtitle;
+        public String navLink1Label;
+        public String navLink1Url;
+        public String navLink2Label;
+        public String navLink2Url;
+        public String navLink3Label;
+        public String navLink3Url;
     }
 
     public static class CreateProjectRequest {
@@ -486,8 +509,15 @@ public class ProjectResource {
         public String backgroundColor;
         public String logoUrl;
         public String heroImageUrl;
+        public String logoDarkUrl;
         public String heroTitle;
         public String heroSubtitle;
+        public String navLink1Label;
+        public String navLink1Url;
+        public String navLink2Label;
+        public String navLink2Url;
+        public String navLink3Label;
+        public String navLink3Url;
         // Emails
         public String emailBoasVindas;
         public String emailAvisoCobranca;

@@ -1,5 +1,6 @@
 package com.incentive.resource;
 
+import jakarta.annotation.security.PermitAll;
 import jakarta.annotation.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.validation.Valid;
@@ -8,10 +9,14 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import com.incentive.dto.AdminEmailCodeRequest;
 import com.incentive.dto.AuthResponse;
+import com.incentive.dto.CompleteRegistrationRequest;
 import com.incentive.dto.LoginRequest;
 import com.incentive.dto.RegisterRequest;
+import com.incentive.dto.SendEmailCodeRequest;
+import com.incentive.dto.VerifyEmailCodeRequest;
 import com.incentive.dto.VerifyEmailRequest;
 import com.incentive.service.AuthService;
+import com.incentive.service.InviteService;
 
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
@@ -20,6 +25,9 @@ public class AuthResource {
 
     @Inject
     AuthService authService;
+
+    @Inject
+    InviteService inviteService;
 
     @POST
     @Path("/register")
@@ -76,5 +84,40 @@ public class AuthResource {
                     .entity("{\"error\": \"Código inválido ou expirado\"}").build();
         }
         return Response.ok("{\"message\": \"E-mail verificado com sucesso\"}").build();
+    }
+
+    @GET
+    @Path("/invite/{token}")
+    @PermitAll
+    public Response getInviteInfo(@PathParam("token") String token) {
+        return Response.ok(inviteService.getInviteInfo(token)).build();
+    }
+
+    @POST
+    @Path("/send-email-code")
+    @PermitAll
+    public Response sendEmailCode(@Valid SendEmailCodeRequest request) {
+        authService.sendEmailCode(request.email, request.projectHash);
+        return Response.ok("{\"message\": \"Código enviado com sucesso\"}").build();
+    }
+
+    @POST
+    @Path("/verify-email-code")
+    @PermitAll
+    public Response verifyEmailCode(@Valid VerifyEmailCodeRequest request) {
+        boolean valid = authService.verifyEmailCode(request.email, request.code);
+        if (!valid) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"message\": \"Código inválido\"}").build();
+        }
+        return Response.ok("{\"message\": \"Código verificado com sucesso\"}").build();
+    }
+
+    @POST
+    @Path("/complete-registration")
+    @PermitAll
+    public Response completeRegistration(@Valid CompleteRegistrationRequest request) {
+        AuthResponse resp = authService.completeRegistration(request);
+        return Response.ok(resp).build();
     }
 }

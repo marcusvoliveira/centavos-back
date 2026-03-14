@@ -7,10 +7,14 @@ import jakarta.transaction.Transactional;
 import jakarta.ws.rs.BadRequestException;
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.NotAuthorizedException;
+import jakarta.ws.rs.WebApplicationException;
+import jakarta.ws.rs.core.Response;
+import com.incentive.entity.Project;
 import com.incentive.entity.Role;
 import com.incentive.entity.User;
 import com.incentive.entity.UserProject;
 import com.incentive.security.TokenService;
+import com.incentive.service.ProjectHashService;
 import com.incentive.util.EmailVerificationCache;
 import com.incentive.util.PasswordUtil;
 
@@ -48,17 +52,26 @@ public class AuthService {
         user.password = PasswordUtil.hashPassword(request.password);
         user.phone = request.phone;
         user.role = Role.USER;
-        user.emailVerified = false;
-
-        // Gerar código de verificação
-        String verificationCode = generateVerificationCode();
-        user.verificationCode = verificationCode;
-        user.verificationCodeExpiresAt = LocalDateTime.now().plusHours(24);
+        user.emailVerified = true; // e-mail já verificado via formulário
 
         user.persist();
 
-        // Enviar email de verificação
-        emailService.sendVerificationEmail(user.email, user.name, verificationCode);
+        // Vincular ao projeto se projectHash fornecido
+        if (request.projectHash != null && !request.projectHash.isBlank()) {
+            try {
+                Long projectId = projectHashService.decryptProjectHash(request.projectHash);
+                Project project = Project.findById(projectId);
+                if (project != null) {
+                    UserProject up = new UserProject();
+                    up.user = user;
+                    up.project = project;
+                    up.role = Role.USER;
+                    up.persist();
+                }
+            } catch (Exception ignored) {
+                // hash inválido — continua sem vincular
+            }
+        }
 
         // Gerar token
         String token = tokenService.generateToken(user);
@@ -117,16 +130,67 @@ public class AuthService {
         user.persist();
 
         // Enviar email
-        emailService.sendVerificationEmail(user.email, user.name, verificationCode);
+        emailService.sendVerificationEmail(user.email, user.name, verificationCode, null);
     }
 
     public void sendAdminEmailCode(String email, String name) {
         String code = generateVerificationCode();
         emailVerificationCache.store(email, code);
-        emailService.sendVerificationEmail(email, name, code);
+        emailService.sendVerificationEmail(email, name, code, null);
     }
 
     public boolean verifyAdminEmailCode(String email, String code) {
+        return emailVerificationCache.verify(email, code);
+    }
+
+    @Transactional
+    public AuthResponse completeRegistration(CompleteRegistrationRequest request) {
+        User user = User.findByInviteToken(request.token)
+                .orElseThrow(() -> new WebApplicationException("Token inválido", Response.Status.BAD_REQUEST));
+
+        if (user.inviteTokenExpiresAt == null || LocalDateTime.now().isAfter(user.inviteTokenExpiresAt)) {
+            throw new WebApplicationException("Token expirado", Response.Status.BAD_REQUEST);
+        }
+
+        if (request.nome != null && !request.nome.isBlank()) {
+            user.name = request.nome;
+        }
+        user.email = request.email;
+        user.password = PasswordUtil.hashPassword(request.senha);
+        user.phone = request.telefone;
+        user.emailVerified = true;
+        user.inviteToken = null;
+        user.inviteTokenExpiresAt = null;
+        user.persist();
+
+        String token = tokenService.generateToken(user);
+
+        List<UserProjectDTO> projects = getUserProjects(user.id);
+
+        return new AuthResponse(token, UserDTO.from(user), projects);
+    }
+
+    public void sendEmailCode(String email, String projectHash) {
+        String code = generateVerificationCode();
+        emailVerificationCache.store(email, code);
+
+        String logoUrl = null;
+        if (projectHash != null && !projectHash.isBlank()) {
+            try {
+                Long projectId = projectHashService.decryptProjectHash(projectHash);
+                Project project = Project.findById(projectId);
+                if (project != null) {
+                    logoUrl = project.logoUrl;
+                }
+            } catch (Exception ignored) {
+                // hash inválido — continua sem logo
+            }
+        }
+
+        emailService.sendVerificationEmail(email, email, code, logoUrl);
+    }
+
+    public boolean verifyEmailCode(String email, String code) {
         return emailVerificationCache.verify(email, code);
     }
 

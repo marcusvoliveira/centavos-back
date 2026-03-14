@@ -8,4 +8,6 @@ public class SendEmailCodeRequest {
     @NotBlank(message = "Email é obrigatório")
     @Email(message = "Email deve ser válido")
     public String email;
+
+    public String projectHash;
 }

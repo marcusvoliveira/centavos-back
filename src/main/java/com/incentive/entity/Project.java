@@ -47,12 +47,34 @@ public class Project extends PanacheEntity {
     @Column(name = "hero_image_url", columnDefinition = "TEXT")
     public String heroImageUrl;
 
+    @Column(name = "logo_dark_url", columnDefinition = "TEXT")
+    public String logoDarkUrl;
+
     // Hero section texts
     @Column(name = "hero_title", length = 200)
     public String heroTitle;
 
     @Column(name = "hero_subtitle", length = 500)
     public String heroSubtitle;
+
+    // Navigation links
+    @Column(name = "nav_link1_label", length = 60)
+    public String navLink1Label;
+
+    @Column(name = "nav_link1_url", length = 500)
+    public String navLink1Url;
+
+    @Column(name = "nav_link2_label", length = 60)
+    public String navLink2Label;
+
+    @Column(name = "nav_link2_url", length = 500)
+    public String navLink2Url;
+
+    @Column(name = "nav_link3_label", length = 60)
+    public String navLink3Label;
+
+    @Column(name = "nav_link3_url", length = 500)
+    public String navLink3Url;
 
     // Financial
     @Column(name = "min_value", precision = 10, scale = 2)
